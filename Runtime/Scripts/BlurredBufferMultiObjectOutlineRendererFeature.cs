@@ -6,9 +6,11 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
     private static readonly int SpreadId = Shader.PropertyToID("_Spread");
 
     [SerializeField] private RenderPassEvent renderEvent = RenderPassEvent.AfterRenderingTransparents;
-    [Space, SerializeField] private Material dilationMaterial;
+    [Space]
+    [SerializeField] private Material dilationMaterial;
     [SerializeField] private Material outlineMaterial;
-    [SerializeField, Range(1, 60)] private int spread = 15;
+    [SerializeField, Range(1, 60)] private int spread = 10;
+    [SerializeField] private Color outlineColor = Color.cyan;
 
     private BlurredBufferMultiObjectOutlinePass _outlinePass;
 
@@ -24,7 +26,7 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
 
     public override void Create()
     {
-        name = "Multi-Object Outliner";
+        name = "Outliner";
 
         // Pass in constructor variables which don't/shouldn't need to be updated every frame.
         _outlinePass = new BlurredBufferMultiObjectOutlinePass();
@@ -49,6 +51,7 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
         _outlinePass.DilationMaterial = dilationMaterial;
         dilationMaterial.SetInteger("_Spread", spread);
         _outlinePass.OutlineMaterial = outlineMaterial;
+        outlineMaterial.SetColor("_BaseColor", outlineColor);
         _outlinePass.Renderers = _targetRenderers;
 
         renderer.EnqueuePass(_outlinePass);
