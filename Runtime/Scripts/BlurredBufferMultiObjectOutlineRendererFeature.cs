@@ -1,10 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRendererFeature
 {
-    private static readonly int SpreadId = Shader.PropertyToID("_Spread");
-
     [SerializeField] private RenderPassEvent renderEvent = RenderPassEvent.AfterRenderingTransparents;
     [Space]
     [SerializeField] private Material dilationMaterial;
@@ -14,14 +14,30 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
 
     private BlurredBufferMultiObjectOutlinePass _outlinePass;
 
-    private Renderer[] _targetRenderers;
+    private HashSet<Renderer> _targetRenderers;
 
-    public void SetRenderers(Renderer[] targetRenderers)
+    public void AddRenderers(List<Renderer> targetRenderers)
     {
-        _targetRenderers = targetRenderers;
+        if (_targetRenderers == null)
+            _targetRenderers = new HashSet<Renderer>();
+
+        foreach (Renderer renderer in targetRenderers)
+            _targetRenderers.Add(renderer);
 
         if (_outlinePass != null)
-            _outlinePass.Renderers = _targetRenderers;
+            _outlinePass.Renderers = _targetRenderers.ToArray();
+    }
+
+    public void RemoveRenderers(List<Renderer> targetRenderers)
+    {
+        if (_targetRenderers != null)
+        {
+            foreach (Renderer renderer in targetRenderers)
+                _targetRenderers.Remove(renderer);
+
+            if (_outlinePass != null)
+                _outlinePass.Renderers = _targetRenderers.ToArray();
+        }
     }
 
     public override void Create()
@@ -40,7 +56,7 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
         if (!dilationMaterial ||
             !outlineMaterial ||
             _targetRenderers == null ||
-            _targetRenderers.Length == 0)
+            _targetRenderers.Count == 0)
         {
             // Don't render the effect if there's nothing to render
             return;
@@ -52,7 +68,7 @@ public class BlurredBufferMultiObjectOutlineRendererFeature : ScriptableRenderer
         dilationMaterial.SetInteger("_Spread", spread);
         _outlinePass.OutlineMaterial = outlineMaterial;
         outlineMaterial.SetColor("_BaseColor", outlineColor);
-        _outlinePass.Renderers = _targetRenderers;
+        _outlinePass.Renderers = _targetRenderers.ToArray();
 
         renderer.EnqueuePass(_outlinePass);
     }
