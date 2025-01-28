@@ -33,7 +33,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints:
     - _GridSize: 1
-    - _Spread: 44
+    - _Spread: 10
     m_Floats:
     - _Spread: 43.8
     m_Colors: []
