@@ -9,7 +9,7 @@ Shader "Hidden/Dilation"
     {
         Tags
         {
-            "RenderType"="Opaque" "RenderPipeline" = "UniversalPipeline"
+            "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"
         }
         LOD 100
         ZWrite Off Cull Off
@@ -18,9 +18,14 @@ Shader "Hidden/Dilation"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
-        SAMPLER(sampler_BlitTexture);
+        // To make the Unity shader SRP Batcher compatible, declare all
+        // properties related to a Material in a a single CBUFFER block with 
+        // the name UnityPerMaterial.
+        CBUFFER_START(UnityPerMaterial)
+            SAMPLER(sampler_BlitTexture);
+            float _Spread;
+        CBUFFER_END
 
-        float _Spread;
         ENDHLSL
 
         Pass
