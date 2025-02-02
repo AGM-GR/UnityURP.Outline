@@ -14,8 +14,9 @@ namespace UnityURP.Outline
         {
             if (outlineRenderers == null || outlineRenderers.Count == 0)
                 FillRenderersNoParticleSystems();
-
-            OnEnable();
+            
+            if (gameObject.activeInHierarchy)
+                RefreshOutline();
         }
 
         [ContextMenu("Reassign Renderers")]
@@ -47,6 +48,19 @@ namespace UnityURP.Outline
         private void OnDisable()
         {
             outlineRendererFeature?.RemoveRenderers(outlineRenderers);
+        }
+
+        public void UpdateRenderers(List<Renderer> newRenderers)
+        {
+            outlineRendererFeature?.RemoveRenderers(outlineRenderers);
+            outlineRenderers = newRenderers;
+            outlineRendererFeature?.AddRenderers(outlineRenderers);
+        }
+
+        public void RefreshOutline()
+        {
+            outlineRendererFeature?.RemoveRenderers(outlineRenderers);
+            outlineRendererFeature?.AddRenderers(outlineRenderers);
         }
     }
 }
