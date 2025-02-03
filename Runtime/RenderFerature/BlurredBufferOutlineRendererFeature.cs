@@ -7,13 +7,19 @@ namespace UnityURP.Outline
 {
     public class BlurredBufferOutlineRendererFeature : ScriptableRendererFeature
     {
+        private const string DilationShaderName = "Hidden/Dilation";
+        private const string OutlineShaderName = "Hidden/Outline Color And Stencil";
+
         [SerializeField] private RenderPassEvent renderEvent = RenderPassEvent.AfterRenderingTransparents;
         [Space]
-        [SerializeField] private Material dilationMaterial;
-        [SerializeField] private Material outlineMaterial;
+        [SerializeField] private Shader dilationShader;
+        [SerializeField] private Shader outlineShader;
+        [Space]
         [SerializeField, Range(1, 60)] private int spread = 10;
         [SerializeField] private Color outlineColor = Color.cyan;
 
+        private Material dilationMaterial;
+        private Material outlineMaterial;
         private BlurredBufferOutlinePass _outlinePass;
 
         private HashSet<Renderer> _targetRenderers;
@@ -48,6 +54,25 @@ namespace UnityURP.Outline
 
             // Pass in constructor variables which don't/shouldn't need to be updated every frame.
             _outlinePass = new BlurredBufferOutlinePass();
+
+            if (dilationShader == null)
+                dilationShader = Shader.Find(DilationShaderName);
+            if (outlineShader == null)
+                outlineShader = Shader.Find(OutlineShaderName);
+
+            if (dilationMaterial == null)
+                dilationMaterial = RenderFeatureUtils.CreateMaterial(dilationShader);
+            if (outlineMaterial == null)
+                outlineMaterial = RenderFeatureUtils.CreateMaterial(outlineShader);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                RenderFeatureUtils.Destroy(dilationMaterial);
+                RenderFeatureUtils.Destroy(outlineMaterial);
+            }
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
