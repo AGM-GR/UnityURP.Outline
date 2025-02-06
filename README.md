@@ -6,7 +6,7 @@ UnityURP.Outline
 
 <br>
 
-![](https://github.com/user-attachments/assets/af24027f-7a5c-4fb8-a318-9cc2cff0ff8c)
+![image](https://github.com/user-attachments/assets/56c90ecc-9718-4be7-967a-3b1f619bbd68)
 
 ## Description
 
