@@ -15,7 +15,7 @@ namespace UnityURP.Outline
             if (outlineRenderers == null || outlineRenderers.Count == 0)
                 FillRenderersNoParticleSystems();
             
-            if (gameObject.activeInHierarchy)
+            if (this.enabled && gameObject.activeInHierarchy)
                 RefreshOutline();
         }
 
