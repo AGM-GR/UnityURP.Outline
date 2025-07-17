@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,42 +10,67 @@ namespace UnityURP.Outline
     {
         private const string DilationShaderName = "Hidden/Dilation";
         private const string OutlineShaderName = "Hidden/Outline Color And Stencil";
+        
+        private static Dictionary<OutlineMaterial, HashSet<Renderer>> _targetRenderers;
+        private static bool _targetRenderersModifyed;
 
         [SerializeField] private RenderPassEvent renderEvent = RenderPassEvent.AfterRenderingTransparents;
         [Space]
-        [SerializeField] private Shader dilationShader;
-        [SerializeField] private Shader outlineShader;
-        [Space]
-        [SerializeField, Range(1, 60)] private int spread = 10;
-        [SerializeField] private Color outlineColor = Color.cyan;
+        [SerializeField] private Shader _dilationShader;
+        [SerializeField] private Shader _outlineShader;
 
-        private Material dilationMaterial;
-        private Material outlineMaterial;
-        private BlurredBufferOutlinePass _outlinePass;
+        private Dictionary<OutlineMaterial, BlurredBufferOutlinePassData> _outlinePasses = new();
 
-        private HashSet<Renderer> _targetRenderers;
+        
 
-        public void AddRenderers(List<Renderer> targetRenderers)
+        [Serializable]
+        protected class BlurredBufferOutlinePassData : IDisposable
         {
-            if (_targetRenderers == null)
-                _targetRenderers = new HashSet<Renderer>();
+            public Material dilationMaterial;
+            public Material outlineMaterial;
+            public BlurredBufferOutlinePass outlinePass;
 
-            foreach (Renderer renderer in targetRenderers)
-                _targetRenderers.Add(renderer);
+            public BlurredBufferOutlinePassData(Shader dilationShader, Shader outlineShader)
+            {
+                outlinePass = new BlurredBufferOutlinePass();
+                dilationMaterial = RenderFeatureUtils.CreateMaterial(dilationShader);
+                outlineMaterial = RenderFeatureUtils.CreateMaterial(outlineShader);
+            }
 
-            if (_outlinePass != null)
-                _outlinePass.Renderers = _targetRenderers.ToArray();
+            public void Dispose()
+            {
+                RenderFeatureUtils.Destroy(dilationMaterial);
+                RenderFeatureUtils.Destroy(outlineMaterial);
+            }
         }
 
-        public void RemoveRenderers(List<Renderer> targetRenderers)
+
+        public static void AddRenderers(List<Renderer> targetRenderers, OutlineMaterial outlineMaterial)
+        {
+            if (outlineMaterial == null) return;
+
+            if (_targetRenderers == null)
+                _targetRenderers = new ();
+
+            if (!_targetRenderers.ContainsKey(outlineMaterial))
+                _targetRenderers.Add(outlineMaterial, new HashSet<Renderer>());
+
+            foreach (Renderer renderer in targetRenderers)
+                _targetRenderers[outlineMaterial].Add(renderer);
+
+            _targetRenderersModifyed = true;
+        }
+
+        public static void RemoveRenderers(List<Renderer> targetRenderers, OutlineMaterial outlineMaterial)
         {
             if (_targetRenderers != null)
             {
-                foreach (Renderer renderer in targetRenderers)
-                    _targetRenderers.Remove(renderer);
+                if (!_targetRenderers.ContainsKey(outlineMaterial)) return;
 
-                if (_outlinePass != null)
-                    _outlinePass.Renderers = _targetRenderers.ToArray();
+                foreach (Renderer renderer in targetRenderers)
+                    _targetRenderers[outlineMaterial].Remove(renderer);
+
+                _targetRenderersModifyed = true;
             }
         }
 
@@ -53,51 +79,59 @@ namespace UnityURP.Outline
             name = "Outliner";
 
             // Pass in constructor variables which don't/shouldn't need to be updated every frame.
-            _outlinePass = new BlurredBufferOutlinePass();
-
-            if (dilationShader == null)
-                dilationShader = Shader.Find(DilationShaderName);
-            if (outlineShader == null)
-                outlineShader = Shader.Find(OutlineShaderName);
-
-            if (dilationMaterial == null)
-                dilationMaterial = RenderFeatureUtils.CreateMaterial(dilationShader);
-            if (outlineMaterial == null)
-                outlineMaterial = RenderFeatureUtils.CreateMaterial(outlineShader);
+            if (_dilationShader == null)
+                _dilationShader = Shader.Find(DilationShaderName);
+            if (_outlineShader == null)
+                _outlineShader = Shader.Find(OutlineShaderName);
         }
 
         protected override void Dispose(bool disposing)
-        {
+        {   
             if (disposing)
             {
-                RenderFeatureUtils.Destroy(dilationMaterial);
-                RenderFeatureUtils.Destroy(outlineMaterial);
+                foreach (BlurredBufferOutlinePassData passData in _outlinePasses.Values)
+                {
+                    passData.Dispose();
+                }
+
+                _outlinePasses.Clear();
             }
         }
 
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
-            if (_outlinePass == null)
-                return;
-
-            if (!dilationMaterial ||
-                !outlineMaterial ||
-                _targetRenderers == null ||
+            if (_targetRenderers == null ||
                 _targetRenderers.Count == 0)
             {
                 // Don't render the effect if there's nothing to render
                 return;
             }
 
-            // Any variables you may want to update every frame should be set here.
-            _outlinePass.RenderEvent = renderEvent;
-            _outlinePass.DilationMaterial = dilationMaterial;
-            dilationMaterial.SetInteger("_Spread", spread);
-            _outlinePass.OutlineMaterial = outlineMaterial;
-            outlineMaterial.SetColor("_BaseColor", outlineColor);
-            _outlinePass.Renderers = _targetRenderers.ToArray();
+            foreach (OutlineMaterial outlineMaterial in _targetRenderers.Keys)
+            {
+                if (!_outlinePasses.ContainsKey(outlineMaterial))
+                {
+                    _outlinePasses.Add(outlineMaterial, new BlurredBufferOutlinePassData(_dilationShader, _outlineShader));
+                }
+            }
 
-            renderer.EnqueuePass(_outlinePass);
+            if (_outlinePasses == null || _outlinePasses.Count <= 0)
+                return;
+
+
+            // Any variables you may want to update every frame should be set here.
+            foreach (OutlineMaterial material in _outlinePasses.Keys)
+            {
+                _outlinePasses[material].outlinePass.RenderEvent = renderEvent;
+                _outlinePasses[material].outlinePass.DilationMaterial = _outlinePasses[material].dilationMaterial;
+                _outlinePasses[material].dilationMaterial.SetInteger("_Spread", material.Spread);
+                _outlinePasses[material].outlinePass.OutlineMaterial = _outlinePasses[material].outlineMaterial;
+                _outlinePasses[material].outlineMaterial.SetColor("_BaseColor", material.OutlineColor);
+
+                _outlinePasses[material].outlinePass.Renderers = _targetRenderers[material].ToArray();
+
+                renderer.EnqueuePass(_outlinePasses[material].outlinePass);
+            }
         }
     }
 }

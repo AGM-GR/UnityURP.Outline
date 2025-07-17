@@ -1,15 +1,15 @@
 {
-    "name": "agm.urp.outline",
-    "version": "0.1.0",
-    "displayName": "UnityURP.Outline",
-    "description": "Outline effect for URP",
-    "unity": "6000.0",
-    "unityRelease": "20f1",
-    "keywords": [
-        "URP",
-        "Outline"
-    ],
-    "author": {
-        "name": "AGM-GR"
-    }
+  "name": "agm.urp.outline",
+  "version": "0.2.0",
+  "displayName": "UnityURP.Outline",
+  "description": "Outline effect for URP",
+  "unity": "6000.0",
+  "unityRelease": "20f1",
+  "keywords": [
+    "URP",
+    "Outline"
+  ],
+  "author": {
+    "name": "AGM-GR"
+  }
 }

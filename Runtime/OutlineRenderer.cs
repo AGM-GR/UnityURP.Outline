@@ -7,60 +7,80 @@ namespace UnityURP.Outline
     [ExecuteAlways]
     public class OutlineRenderer : MonoBehaviour
     {
-        [SerializeField] private BlurredBufferOutlineRendererFeature outlineRendererFeature;
-        [SerializeField] private List<Renderer> outlineRenderers;
+        [SerializeField] 
+        private OutlineMaterial _outlineMaterial;
+
+        [SerializeField] 
+        private List<Renderer> _outlineRenderers;
+
+#if UNITY_EDITOR
+        private OutlineMaterial _oldOutlineMaterial;
+#endif
 
         private void OnValidate()
         {
-            if (outlineRenderers == null || outlineRenderers.Count == 0)
+            if (_outlineRenderers == null || _outlineRenderers.Count == 0)
                 FillRenderersNoParticleSystems();
             
             if (this.enabled && gameObject.activeInHierarchy)
                 RefreshOutline();
+
+            if (_oldOutlineMaterial != null && _oldOutlineMaterial != _outlineMaterial)
+            {
+                BlurredBufferOutlineRendererFeature.RemoveRenderers(_outlineRenderers, _oldOutlineMaterial);
+            }
+            _oldOutlineMaterial = _outlineMaterial;
         }
 
         [ContextMenu("Reassign Renderers")]
         public void FillAllRenderers()
         {
-            outlineRenderers = GetComponentsInChildren<Renderer>(true).ToList();
+            _outlineRenderers = GetComponentsInChildren<Renderer>(true).ToList();
         }
 
         [ContextMenu("Reassign Renderers without Particles")]
         public void FillRenderersNoParticleSystems()
         {
             var allRenderers = GetComponentsInChildren<Renderer>(true);
-            outlineRenderers = new List<Renderer>(allRenderers.Length);
+            _outlineRenderers = new List<Renderer>(allRenderers.Length);
 
             foreach (var renderer in allRenderers)
             {
                 if (!(renderer is ParticleSystemRenderer))
                 {
-                    outlineRenderers.Add(renderer);
+                    _outlineRenderers.Add(renderer);
                 }
             }
         }
 
         private void OnEnable()
         {
-            outlineRendererFeature?.AddRenderers(outlineRenderers);
+            BlurredBufferOutlineRendererFeature.AddRenderers(_outlineRenderers, _outlineMaterial);
         }
 
         private void OnDisable()
         {
-            outlineRendererFeature?.RemoveRenderers(outlineRenderers);
+            BlurredBufferOutlineRendererFeature.RemoveRenderers(_outlineRenderers, _outlineMaterial);
         }
 
         public void UpdateRenderers(List<Renderer> newRenderers)
         {
-            outlineRendererFeature?.RemoveRenderers(outlineRenderers);
-            outlineRenderers = newRenderers;
-            outlineRendererFeature?.AddRenderers(outlineRenderers);
+            BlurredBufferOutlineRendererFeature.RemoveRenderers(_outlineRenderers, _outlineMaterial);
+            _outlineRenderers = newRenderers;
+            BlurredBufferOutlineRendererFeature.AddRenderers(_outlineRenderers, _outlineMaterial);
+        }
+
+        public void ChangeOutlineMaterial(OutlineMaterial outlineMaterial)
+        {
+            BlurredBufferOutlineRendererFeature.RemoveRenderers(_outlineRenderers, _outlineMaterial);
+            _outlineMaterial = outlineMaterial;
+            BlurredBufferOutlineRendererFeature.AddRenderers(_outlineRenderers, _outlineMaterial);
         }
 
         public void RefreshOutline()
         {
-            outlineRendererFeature?.RemoveRenderers(outlineRenderers);
-            outlineRendererFeature?.AddRenderers(outlineRenderers);
+            BlurredBufferOutlineRendererFeature.RemoveRenderers(_outlineRenderers, _outlineMaterial);
+            BlurredBufferOutlineRendererFeature.AddRenderers(_outlineRenderers, _outlineMaterial);
         }
     }
 }
